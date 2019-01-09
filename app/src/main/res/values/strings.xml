@@ -1,3 +1,9 @@
 <resources>
-    <string name="app_name">BakingApp</string>
+    <string name="app_name">Bake Rap</string>
+    <string name="error_getting_assets">error getting assets</string>
+    <string name="recipe_name_placeholder">Recipe Name</string>
+    <string name="quantity">Quantity: %s Measure:%s</string>
+    <string name="title_step_list">Steps</string>
+    <string name="title_step_detail">Step Detail</string>
+    <string name="recipe_step_placeholder">Recipe Step</string>
 </resources>
