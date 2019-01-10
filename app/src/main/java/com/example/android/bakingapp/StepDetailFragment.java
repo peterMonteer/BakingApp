@@ -3,6 +3,8 @@ package com.example.android.bakingapp;
 import android.app.Activity;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -32,10 +34,14 @@ import com.google.android.exoplayer2.util.Util;
 public class StepDetailFragment extends Fragment {
 
     public static final String ARG_STEP_OBJECT = "step";
+    private static final String PLAYER_POSITION = "player_position";
+    private static final String PLAYER_STATE = "player_state" ;
 
     private Step mCurrentStep;
     private SimpleExoPlayer mExoPlayer;
     private SimpleExoPlayerView mPlayerView;
+    private Long mPlayerPosition;
+    private Boolean mPlayerState;
 
 
     public StepDetailFragment() {
@@ -46,7 +52,6 @@ public class StepDetailFragment extends Fragment {
         super.onCreate(savedInstanceState);
 
         if (getArguments().containsKey(ARG_STEP_OBJECT)) {
-
             mCurrentStep = getArguments().getParcelable(ARG_STEP_OBJECT);
 
             Activity activity = this.getActivity();
@@ -54,6 +59,10 @@ public class StepDetailFragment extends Fragment {
             if (stepTitleTextView != null) {
                 stepTitleTextView.setText(mCurrentStep.getShortDescription());
             }
+        }
+        if (savedInstanceState != null){
+            mPlayerState = savedInstanceState.getBoolean(PLAYER_STATE);
+            mPlayerPosition = savedInstanceState.getLong(PLAYER_POSITION);
         }
     }
 
@@ -65,16 +74,17 @@ public class StepDetailFragment extends Fragment {
 
         if (mCurrentStep != null) {
             ((TextView) rootView.findViewById(R.id.step_description_textView)).setText(mCurrentStep.getDescription());
-            String videoUrl = mCurrentStep.getVideoURL();
-            String thumbnailUrl = mCurrentStep.getThumbnailURL();
-            if (!videoUrl.isEmpty()){
-                initializePlayer(videoUrl);
-            } else if (!thumbnailUrl.isEmpty()){
-                initializePlayer(thumbnailUrl);
-            }
         }
-
         return rootView;
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        Long playerPosition = mExoPlayer.getCurrentPosition();
+        Boolean getPlayerWhenReady = mExoPlayer.getPlayWhenReady();
+        outState.putBoolean(PLAYER_STATE, getPlayerWhenReady);
+        outState.putLong(PLAYER_POSITION, playerPosition);
     }
 
     private void initializePlayer(String url){
@@ -87,6 +97,10 @@ public class StepDetailFragment extends Fragment {
             MediaSource mediaSource = new ExtractorMediaSource.Factory(datasourceFactory).createMediaSource(Uri.parse(url));
             mExoPlayer.prepare(mediaSource);
             mExoPlayer.setPlayWhenReady(true);
+            if (mPlayerState != null && mPlayerPosition != null){
+                mExoPlayer.setPlayWhenReady(mPlayerState);
+                mExoPlayer.seekTo(mPlayerPosition);
+            }
         }
     }
 
@@ -98,9 +112,53 @@ public class StepDetailFragment extends Fragment {
 
     @Override
     public void onStop() {
-        if (mExoPlayer != null){
-            releasePlayer();
-        }
         super.onStop();
+        if (mExoPlayer != null){
+            if (Util.SDK_INT > 23) {
+                releasePlayer();
+            }
+        }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        if (Util.SDK_INT <= 23){
+            if (mExoPlayer != null){
+                releasePlayer();
+            }
+        }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (Util.SDK_INT <= 23 || mExoPlayer == null){
+            if (mCurrentStep != null){
+                String videoUrl = mCurrentStep.getVideoURL();
+                String thumbnailUrl = mCurrentStep.getThumbnailURL();
+                if (!videoUrl.isEmpty()){
+                    initializePlayer(videoUrl);
+                } else if (!thumbnailUrl.isEmpty()){
+                    initializePlayer(thumbnailUrl);
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        if (Util.SDK_INT > 23){
+            if (mCurrentStep != null){
+                String videoUrl = mCurrentStep.getVideoURL();
+                String thumbnailUrl = mCurrentStep.getThumbnailURL();
+                if (!videoUrl.isEmpty()){
+                    initializePlayer(videoUrl);
+                } else if (!thumbnailUrl.isEmpty()){
+                    initializePlayer(thumbnailUrl);
+                }
+            }
+        }
     }
 }
